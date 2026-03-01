@@ -1,0 +1,3 @@
+[submodule "setup-scripts"]
+	path = setup-scripts
+	url = https://github.com/premchandkodali/Logs-Monitoring-System.git
