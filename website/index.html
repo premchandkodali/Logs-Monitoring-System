@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LogMonitor — Live Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg      : #060810;
+    --surface : #0d1117;
+    --border  : #1a2332;
+    --accent  : #00ff88;
+    --blue    : #0066ff;
+    --red     : #ff3366;
+    --amber   : #ffaa00;
+    --text    : #e6edf3;
+    --muted   : #4a5568;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 15% 10%, rgba(0,255,136,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 90%, rgba(0,102,255,0.06) 0%, transparent 50%);
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 36px 20px; position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  header { text-align: center; margin-bottom: 44px; animation: up 0.6s ease both; }
+
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,51,102,0.1); border: 1px solid rgba(255,51,102,0.3);
+    color: var(--red); padding: 5px 14px; border-radius: 2px;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px;
+  }
+
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: blink 1s infinite; }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(26px, 5vw, 46px);
+    font-weight: 800; letter-spacing: -2px; margin-bottom: 8px;
+  }
+
+  h1 .g { color: var(--accent); }
+  h1 .b { color: var(--blue); }
+
+  .sub { color: var(--muted); font-size: 12px; letter-spacing: 1px; }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin-bottom: 24px;
+    animation: up 0.6s ease 0.15s both;
+  }
+
+  @media(max-width:600px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 12px; text-align: center;
+    transition: border-color 0.3s;
+  }
+
+  .stat-card.green { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.04); }
+  .stat-card.red   { border-color: rgba(255,51,102,0.3); background: rgba(255,51,102,0.04); }
+  .stat-card.amber { border-color: rgba(255,170,0,0.3);  background: rgba(255,170,0,0.04); }
+  .stat-card.blue  { border-color: rgba(0,102,255,0.3);  background: rgba(0,102,255,0.04); }
+
+  .stat-val {
+    font-size: 28px; font-weight: 700; display: block;
+    margin-bottom: 4px; transition: all 0.4s;
+  }
+
+  .green .stat-val { color: var(--accent); }
+  .red   .stat-val { color: var(--red); }
+  .amber .stat-val { color: var(--amber); }
+  .blue  .stat-val { color: var(--blue); }
+
+  .stat-name { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── BUTTONS SECTION ── */
+  .section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-bottom: 16px;
+    animation: up 0.6s ease 0.25s both;
+  }
+
+  .section-title {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .section-title::before {
+    content: ''; width: 3px; height: 12px;
+    background: var(--accent); border-radius: 2px;
+  }
+
+  .btn-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  @media(max-width:500px) { .btn-grid { grid-template-columns: repeat(2,1fr); } }
+
+  .action-btn {
+    padding: 14px 10px; border-radius: 8px; border: 1px solid;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .action-btn:hover { transform: translateY(-2px); }
+  .action-btn:active { transform: scale(0.97); }
+
+  .action-btn .btn-icon { font-size: 22px; }
+
+  .btn-success {
+    background: rgba(0,255,136,0.08); border-color: rgba(0,255,136,0.3);
+    color: var(--accent);
+  }
+  .btn-success:hover { background: rgba(0,255,136,0.15); box-shadow: 0 6px 20px rgba(0,255,136,0.2); }
+
+  .btn-info {
+    background: rgba(0,102,255,0.08); border-color: rgba(0,102,255,0.3);
+    color: var(--blue);
+  }
+  .btn-info:hover { background: rgba(0,102,255,0.15); box-shadow: 0 6px 20px rgba(0,102,255,0.2); }
+
+  .btn-warning {
+    background: rgba(255,170,0,0.08); border-color: rgba(255,170,0,0.3);
+    color: var(--amber);
+  }
+  .btn-warning:hover { background: rgba(255,170,0,0.15); box-shadow: 0 6px 20px rgba(255,170,0,0.2); }
+
+  .btn-error {
+    background: rgba(255,51,102,0.08); border-color: rgba(255,51,102,0.3);
+    color: var(--red);
+  }
+  .btn-error:hover { background: rgba(255,51,102,0.15); box-shadow: 0 6px 20px rgba(255,51,102,0.2); }
+
+  /* ── LOG FEED ── */
+  .log-feed {
+    background: #000; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; height: 240px; overflow-y: auto; font-size: 11px; line-height: 1.9;
+    animation: up 0.6s ease 0.35s both;
+  }
+
+  .log-feed::-webkit-scrollbar { width: 3px; }
+  .log-feed::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .log-line { display: flex; gap: 10px; align-items: flex-start; }
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-msg  { flex: 1; }
+
+  .log-msg.success { color: var(--accent); }
+  .log-msg.error   { color: var(--red); }
+  .log-msg.warning { color: var(--amber); }
+  .log-msg.info    { color: var(--blue); }
+  .log-msg.muted   { color: var(--muted); }
+
+  /* ── PIPELINE FLOW ── */
+  .flow-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; margin-bottom: 16px; flex-wrap: wrap;
+    animation: up 0.6s ease 0.1s both;
+  }
+
+  .flow-node {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 12px;
+  }
+
+  .flow-icon-wrap {
+    width: 38px; height: 38px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; border: 1px solid var(--border);
+    background: var(--surface); transition: all 0.4s;
+  }
+
+  .flow-icon-wrap.lit {
+    border-color: var(--accent); background: rgba(0,255,136,0.1);
+    box-shadow: 0 0 18px rgba(0,255,136,0.25);
+  }
+
+  .flow-lbl { font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .flow-arr { color: var(--muted); font-size: 16px; margin-bottom: 18px; transition: color 0.4s; }
+  .flow-arr.lit { color: var(--accent); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; top: 20px; right: 20px; z-index: 999;
+    background: var(--surface); border: 1px solid var(--accent);
+    border-radius: 8px; padding: 12px 18px; font-size: 12px;
+    color: var(--accent); display: none;
+    animation: slideIn 0.3s ease;
+    max-width: 280px;
+  }
+
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes up    { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes pop { 0%,100% { transform:scale(1); } 50% { transform:scale(1.15); } }
+
+  .popping { animation: pop 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="live-badge"><div class="live-dot"></div> Live Session</div>
+    <h1><span class="g">Log</span><span class="b">Monitor</span> Demo</h1>
+    <p class="sub">// Every button click generates a real log → sent to AWS S3 automatically</p>
+  </header>
+
+  <!-- PIPELINE FLOW -->
+  <div class="flow-bar" id="flow-bar">
+    <div class="flow-node">
+      <div class="flow-icon-wrap" id="fn-1">🖱️</div>
+      <div class="flow-lbl">Click</div>
+    </div>
+    <div class="flow-arr" id="fa-1">→</div>
+    <div class="flow-node">
+      <div class="flow-icon-wrap" id="fn-2">📡</div>
+      <div class="flow-lbl">API Gateway</div>
+    </div>
+    <div class="flow-arr" id="fa-2">→</div>
+    <div class="flow-node">
+      <div class="flow-icon-wrap" id="fn-3">⚡</div>
+      <div class="flow-lbl">Lambda</div>
+    </div>
+    <div class="flow-arr" id="fa-3">→</div>
+    <div class="flow-node">
+      <div class="flow-icon-wrap" id="fn-4">☁️</div>
+      <div class="flow-lbl">S3</div>
+    </div>
+    <div class="flow-arr" id="fa-4">→</div>
+    <div class="flow-node">
+      <div class="flow-icon-wrap" id="fn-5">📊</div>
+      <div class="flow-lbl">CloudWatch</div>
+    </div>
+    <div class="flow-arr" id="fa-5">→</div>
+    <div class="flow-node">
+      <div class="flow-icon-wrap" id="fn-6">🔔</div>
+      <div class="flow-lbl">Alert</div>
+    </div>
+  </div>
+
+  <!-- LIVE STATS -->
+  <div class="stats-row">
+    <div class="stat-card green">
+      <span class="stat-val" id="stat-total">0</span>
+      <span class="stat-name">Total Logs Sent</span>
+    </div>
+    <div class="stat-card blue">
+      <span class="stat-val" id="stat-success">0</span>
+      <span class="stat-name">Success (2xx)</span>
+    </div>
+    <div class="stat-card amber">
+      <span class="stat-val" id="stat-warn">0</span>
+      <span class="stat-name">Warnings (4xx)</span>
+    </div>
+    <div class="stat-card red">
+      <span class="stat-val" id="stat-error">0</span>
+      <span class="stat-name">Errors (5xx)</span>
+    </div>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="section">
+    <div class="section-title">Simulate User Actions — Each click sends a real log to AWS</div>
+    <div class="btn-grid">
+
+      <button class="action-btn btn-success" onclick="sendLog('GET', '/login', 200, 'User Login')">
+        <span class="btn-icon">🔐</span>
+        Login
+      </button>
+
+      <button class="action-btn btn-success" onclick="sendLog('GET', '/home', 200, 'View Home')">
+        <span class="btn-icon">🏠</span>
+        Home Page
+      </button>
+
+      <button class="action-btn btn-info" onclick="sendLog('GET', '/products', 200, 'Browse Products')">
+        <span class="btn-icon">🛍️</span>
+        Products
+      </button>
+
+      <button class="action-btn btn-info" onclick="sendLog('POST', '/checkout', 200, 'Checkout')">
+        <span class="btn-icon">💳</span>
+        Checkout
+      </button>
+
+      <button class="action-btn btn-warning" onclick="sendLog('GET', '/missing-page', 404, 'Page Not Found')">
+        <span class="btn-icon">🔍</span>
+        404 Error
+      </button>
+
+      <button class="action-btn btn-error" onclick="sendLog('POST', '/api/data', 500, 'Server Crash')">
+        <span class="btn-icon">💥</span>
+        500 Error
+      </button>
+
+    </div>
+  </div>
+
+  <!-- LIVE LOG FEED -->
+  <div class="section" style="padding-bottom:0">
+    <div class="section-title">Live Log Feed — Sent to AWS S3 in real time</div>
+    <div class="log-feed" id="log-feed">
+      <div class="log-line">
+        <span class="log-time">--:--:--</span>
+        <span class="log-msg muted">// Waiting for user actions... Click any button above!</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── CONFIGURATION ─────────────────────────────────────────
+  // After running setup_api_gateway.py, paste your URL here:
+  const API_URL = "https://iw5n27kiog.execute-api.us-east-1.amazonaws.com/prod/log";
+  // Example: "https://abc123.execute-api.us-east-1.amazonaws.com/prod/log"
+
+  // ── COUNTERS ──────────────────────────────────────────────
+  let totalLogs = 0, successLogs = 0, warnLogs = 0, errorLogs = 0;
+
+  // ── SEND LOG TO AWS ───────────────────────────────────────
+  async function sendLog(method, url, statusCode, action) {
+    const now = new Date();
+
+    // Build log payload
+    const payload = {
+      method      : method,
+      url         : url,
+      status_code : statusCode,
+      action      : action,
+      user_agent  : navigator.userAgent,
+      timestamp   : now.toISOString(),
+    };
+
+    // Animate flow pipeline
+    animateFlow();
+
+    // Update counters immediately (optimistic UI)
+    totalLogs++;
+    if      (statusCode >= 500) errorLogs++;
+    else if (statusCode >= 400) warnLogs++;
+    else                        successLogs++;
+    updateStats();
+
+    // Add to log feed immediately
+    const statusClass = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warning' : 'success';
+    addLog(statusClass,
+      `[${method}] ${url} → ${statusCode} | Action: ${action}`
+    );
+
+    // Send to AWS API Gateway
+    if (API_URL === "https://iw5n27kiog.execute-api.us-east-1.amazonaws.com/prod/log") {
+      // Demo mode — no real API yet
+      addLog('info', `  ↳ Demo mode: Log would be sent to AWS S3`);
+      showToast(`✓ Log recorded: ${action}`, false);
+      return;
+    }
+
+    try {
+      addLog('info', `  ↳ Sending to AWS API Gateway...`);
+      const response = await fetch(API_URL, {
+        method  : "POST",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        addLog('success', `  ↳ ✓ Saved to S3 | Log ID: ${data.log_id}`);
+        addLog('success', `  ↳ ✓ Metrics pushed to CloudWatch`);
+        showToast(`✓ Log sent to AWS! ID: ${data.log_id?.slice(0,8)}...`, false);
+      } else {
+        addLog('error', `  ↳ ✗ API Error: ${data.error}`);
+        showToast(`✗ API Error: ${data.error}`, true);
+      }
+
+    } catch (err) {
+      addLog('error', `  ↳ ✗ Network error: ${err.message}`);
+      showToast(`✗ Network error`, true);
+    }
+  }
+
+  // ── UPDATE STAT COUNTERS ──────────────────────────────────
+  function updateStats() {
+    animateNumber('stat-total',   totalLogs);
+    animateNumber('stat-success', successLogs);
+    animateNumber('stat-warn',    warnLogs);
+    animateNumber('stat-error',   errorLogs);
+  }
+
+  function animateNumber(id, val) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.classList.remove('popping');
+    void el.offsetWidth;
+    el.classList.add('popping');
+  }
+
+  // ── ADD LOG LINE ──────────────────────────────────────────
+  function addLog(type, msg) {
+    const feed = document.getElementById('log-feed');
+    const now  = new Date().toTimeString().slice(0, 8);
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML =
+      `<span class="log-time">${now}</span>` +
+      `<span class="log-msg ${type}">${msg}</span>`;
+    feed.appendChild(line);
+    feed.scrollTop = feed.scrollHeight;
+
+    // Keep max 100 lines
+    while (feed.children.length > 100) {
+      feed.removeChild(feed.firstChild);
+    }
+  }
+
+  // ── ANIMATE PIPELINE FLOW ─────────────────────────────────
+  async function animateFlow() {
+    const nodes  = [1,2,3,4,5,6];
+    const arrows = [1,2,3,4,5];
+
+    // Reset
+    nodes.forEach(i  => document.getElementById(`fn-${i}`).classList.remove('lit'));
+    arrows.forEach(i => document.getElementById(`fa-${i}`).classList.remove('lit'));
+
+    // Light up one by one
+    for (let i = 0; i < nodes.length; i++) {
+      await delay(200);
+      document.getElementById(`fn-${nodes[i]}`).classList.add('lit');
+      if (i < arrows.length) {
+        document.getElementById(`fa-${arrows[i]}`).classList.add('lit');
+      }
+    }
+
+    // Reset after 2 seconds
+    setTimeout(() => {
+      nodes.forEach(i  => document.getElementById(`fn-${i}`).classList.remove('lit'));
+      arrows.forEach(i => document.getElementById(`fa-${i}`).classList.remove('lit'));
+    }, 2000);
+  }
+
+  // ── TOAST NOTIFICATION ────────────────────────────────────
+  function showToast(msg, isError) {
+    const toast = document.getElementById('toast');
+    toast.textContent  = msg;
+    toast.className    = isError ? 'toast error' : 'toast';
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+
+</body>
+</html>
